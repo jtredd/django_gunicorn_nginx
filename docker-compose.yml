@@ -1,0 +1,66 @@
+version: "3.3"
+
+services:
+  nginx:
+    restart: always
+    build: ./nginx/
+    ports:
+      - "80:80"
+    links:
+      - web:web
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/ngxin/certs:ro
+      - static-data:/usr/share/nginx/html
+        #    networks:
+        #      - overlay
+
+  postgres:
+    restart: always
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+        #    networks:
+        #      - overlay
+    
+  redis:
+    restart: always
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+        #    networks:
+        #      - overlay
+
+  web:
+    restart: always
+    volumes:
+      - ./web:/srv/web/app
+    build: ./web
+    #    networks:
+    #      - overlay
+    links:
+      - postgres:postgres
+      - redis:redis
+    env_file:
+      - .env
+# DEBUG=true
+# SECRET_KEY=ccccccgetrdgcujltdvvdcghegluttttgkndckghbilg
+# DB_NAME=my_db
+# DB_USER=postgres
+# DB_PASS=postgres
+# DB_SERVICE=postgres
+# DB_PORT=5432
+    working_dir: /srv/web/app
+    command: /usr/local/bin/gunicorn web.wsgi:application -w 2 -b :8000
+
+volumes:
+  db-data:
+  redis-data:
+  static-data:
+
+    #networks:
+    #  overlay:

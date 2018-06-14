@@ -1,0 +1,58 @@
+  nginx:
+    restart: always
+    build: nginx/
+    ports:
+      - 80:80
+      - 443:443
+      - 8443:8443
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/nginx/certs:ro
+			- /usr/share/nginx/html
+    logging:
+      options:
+        max-size: ${NGINX_WEB_LOG_MAX_SIZE:-4m}
+        max-file: ${NGINX_WEB_LOG_MAX_FILE:-10}
+
+#   deploy:
+#     mode: replicated
+#     replicas: 2
+#     endpoint_mode: vip
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+#   deploy:
+#     mode: replicated
+#     replicas: 2
+#     endpoint_mode: dnsrr
+    
+  redis:
+    image: redis:latest
+    ports:
+      - 6379:6379
+    volumes:
+      - redisdata:/data
+#   deploy:
+#     mode: global
+
+  web:
+    restart: always
+    build:
+      - ./web
+    labels:
+      com.example.description: "Hello World!"
+    expose:
+      - 8000
+    links:
+      - postgres
+      - redis
+    volumes:
+      - static-data:/srv/web/app
+    env_file: .env
+    command: /usr/local/bin/gunicorn docker_django.wsgi:application -w 4 -b :8000
+#   deploy:
+#     mode: global
